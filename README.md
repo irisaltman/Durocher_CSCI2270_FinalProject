@@ -6,7 +6,7 @@ This library allows you to interface with the Hummingbird.me API from within you
 
 ### How to run
 
-Running the example program is super easy, simply do `main [username]` to download and browse a certain user's anime library. For example, Josh is the username of the co-founder of Hummingbird. To download and browse his library, simple type `main Josh`.
+Running the example program is super easy, simply do `./main [username]` to download and browse a certain user's anime library. For example, Josh is the username of the co-founder of Hummingbird. To download and browse his library, simple type `./main Josh`.
 [link to documentation]
 
 ### Dependencies
@@ -43,8 +43,10 @@ None, yet.
 
 * Trying to download some users' libraries causes the following error while parsing the JSON objects returned by the Hummingbird API:
 
-    terminate called after throwing an instance of 'std::logic_error'
+```
+terminate called after throwing an instance of 'std::logic_error'
     what():  basic_string::_S_construct null not valid
+```
     
 ### Future Features
 
