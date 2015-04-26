@@ -27,7 +27,7 @@ LIB_DEBUG = $(LIB)
 LDFLAGS_DEBUG = $(LDFLAGS)
 OBJDIR_DEBUG = obj/Debug
 DEP_DEBUG = 
-OUT_DEBUG = bin/Debug/Final\ Project
+OUT_DEBUG = bin/Debug/maind
 
 INC_RELEASE = $(INC) -Iinclude
 CFLAGS_RELEASE = $(CFLAGS) -O2
@@ -38,7 +38,7 @@ LIB_RELEASE = $(LIB)
 LDFLAGS_RELEASE = $(LDFLAGS) -s
 OBJDIR_RELEASE = obj/Release
 DEP_RELEASE = 
-OUT_RELEASE = bin/Release/Final\ Project
+OUT_RELEASE = bin/Release/main
 
 OBJ_DEBUG = $(OBJDIR_DEBUG)/src/Library.o $(OBJDIR_DEBUG)/src/LibraryEntry.o $(OBJDIR_DEBUG)/src/main.o
 
