@@ -30,6 +30,11 @@ Library::~Library()
         curl_global_cleanup();
         curl_setup = false;
     }
+
+    /* Delete hashtable */
+    if(library_size > 1) {
+
+    }
 }
 
 // Source: http://stackoverflow.com/questions/9786150/save-curl-content-result-into-a-string-in-c

@@ -2,7 +2,7 @@
 #define LIBRARY_H
 #include "LibraryEntry.h"
 #include <string>
-#include <json/json.h>
+#include <json-c/json.h>
 
 struct LibraryEntryWrapper {
     LibraryEntry *entry;
