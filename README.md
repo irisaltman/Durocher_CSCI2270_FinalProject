@@ -19,10 +19,6 @@ To install them in Fedora:
 
     # yum install json-c json-c-devel libcurl libcurl-devel
     
-Unfortunately the json-c library on Fedora is installed in json-c/json.h and not json/json.h, so a temporary solution to make Palmtop compile on Fedora is to do
-
-    # ln -s /usr/include/json-c /usr/include/json
-    
 You can build the program by running `make`, which will output the example program to the folder `bin/Release/`. You can also load the Code Blocks project file if you want.
 
 ### System Requirements
