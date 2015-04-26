@@ -46,7 +46,7 @@ terminate called after throwing an instance of 'std::logic_error'
     
 ### Future Features
 
-There is a bunch of information returned by the Hummingbird API that isn't being stored yet. See [the official Hummingbird API reference](https://github.com/hummingbird-me/hummingbird/wiki/API-v1-Structures) for a full list of all the fields in the Anime and Library entry objects. Some of the ones that aren't being used yet include the URL to the corresponding Hummingbird anime page, started/finished airing dates, age rating, user's notes, times rewatched, rewatching status, etc. Adding these would be as simple as adding the corresponding strings and getters in the LibraryEntry class and making sure we parse the JSON objects for the information when want in `getLibrary()`.
+There is a bunch of information returned by the Hummingbird API that isn't being stored yet. See [the official Hummingbird API reference](https://github.com/hummingbird-me/hummingbird/wiki/API-v1-Structures) for a full list of all the fields in the Anime and Library entry objects. Some of the ones that aren't being used yet include the URL to the corresponding Hummingbird anime page, started/finished airing dates, age rating, user's notes, times rewatched, rewatching status, etc. Adding these would be as simple as adding the corresponding strings and getters in the LibraryEntry class and making sure we parse the JSON objects for the information when want in `getLibrary()` and the LibraryEntry constructor.
 
 In the future there should also be a class that contains information about the specific user, like a bio and their favorites.
 
