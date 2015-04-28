@@ -4,6 +4,7 @@
 #include <json-c/json.h>
 #include <vector>
 
+/* Possible values for libraryStatus */
 enum library_status {
     CURRENTLY_WATCHING,
     PLAN_TO_WATCH,
@@ -17,7 +18,6 @@ class LibraryEntry
 {
     public:
         LibraryEntry(json_object *j);
-        LibraryEntry();
         virtual ~LibraryEntry();
         std::string getTitle() { return title; }
         std::string getSynopsis() { return synopsis; }

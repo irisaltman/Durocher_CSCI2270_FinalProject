@@ -6,6 +6,15 @@
 #include <algorithm>
 #include <json-c/json.h>
 
+/* Defines the Library class, which includes the LibraryEntry class.
+   The Library class has 4 public methods and the LibraryEntry class
+   has 10 public methods, almost all of which are simple getters.
+   The Library class contains a hash table that stores LibraryEntries.
+   Each LibraryEntry object corresponds to an anime with metadata
+   downloaded from the Hummingbird API, and the Library object
+   stores all of the LibraryEntries contained in a user's Hummingbird
+   library. */
+
 class Library
 {
 
@@ -30,6 +39,7 @@ class Library
         virtual ~Library();
         LibraryEntry* getLibraryEntry(std::string title);
         std::vector<LibraryEntry*> getLibraryEntries(library_status ls);
+        static bool libraryEntryTitleSort(LibraryEntry* i, LibraryEntry* j);
         int getLibrarySize();
 
     protected:
@@ -38,7 +48,6 @@ class Library
         void addEntry(LibraryEntry *x);
         int hashSum(std::string title);
         static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp);
-        static bool libraryEntryTitleSort(LibraryEntry* i, LibraryEntry* j);
         bool curl_setup;
         json_object *library_json;
         int library_size;

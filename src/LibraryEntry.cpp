@@ -1,5 +1,17 @@
 #include "LibraryEntry.h"
 
+/* LibraryEntry* = new LibraryEntry(json_object);
+
+   Constructor for the LibraryEntry class. Defines all of the private members
+   by parsing the final json_object created by the Library class.
+
+   ex. LibraryEntry *le = new LibraryEntry(json_object_final);
+
+   Pre-conditions: final json object created by getLibrary(). This constructor
+   should really only be called from within getLibrary().
+
+   Post-conditions: returns a fully constructed LibraryEntry. */
+
 LibraryEntry::LibraryEntry(json_object *j)
 {
     json_object *title_json;
@@ -62,6 +74,7 @@ LibraryEntry::LibraryEntry(json_object *j)
     }
 }
 
+/* Destructor: nothing to do */
 LibraryEntry::~LibraryEntry()
 {
     //dtor

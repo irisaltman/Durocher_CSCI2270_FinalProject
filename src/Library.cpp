@@ -6,12 +6,33 @@
 /* Number of easy curls to bundle in a multi curl. ~50-100 seems to be optimum */
 #define N 50
 
+/* Number of slots to use in the hash table */
+#define HASHSIZE 100
+
+/* new Library(string);
+
+   Constructor for the Library class. Initializes curl globally in preparation
+   for downloading library contents; sets the h hash table size; initializes
+   the hash table, and initializes download of user's library by calling
+   the getLibrary() function. Sets size of library to -1 on failure.
+
+   ex. Library *L = new Library("Josh");
+
+   Pre-conditions: must be passed a string corresponding to the name of a
+   user on Hummingbird.me, otherwise the call to getLibrary will fail. Internet
+   access is also required for cURL to work!
+
+   Post-conditions: user's anime library has been downloaded from the Hummingbird
+   API, parsed into LibraryEntry objects using libjson-c, and stored in hashTable,
+   including all metadata defined in the LibraryEntry class. cURL has been globally
+   initialized, and the size of the library has been defined. */
+
 Library::Library(std::string username)
 {
     /* Should be called only once for the entire program */
     curl_global_init(CURL_GLOBAL_SSL);
 
-    hash_size = 100;
+    hash_size = HASHSIZE;
     hashTable = new LibraryEntryWrapper[hash_size];
 
     int failure = getLibrary(username);
@@ -21,6 +42,16 @@ Library::Library(std::string username)
     if(failure == 1)
         library_size = -1;
 }
+
+/* Destructor for the Library class. Cleans up curl globally in anticipation of
+   no more network transfers being required.
+
+   ex. delete L;
+
+   Pre-conditions: Library has been constructed by calling the class constructor.
+   The construction does not have to have been successful.
+
+   Post-conditions: All LibraryEntry objects stored in the hashTable are deleted. */
 
 Library::~Library()
 {
@@ -42,13 +73,54 @@ Library::~Library()
     }
 }
 
-/* Writes the data returned by each curl to the buffer string pointed to by *userp.
-   Source: http://stackoverflow.com/questions/9786150/save-curl-content-result-into-a-string-in-c */
+/* curl_easy_setopt(CURL, CURLOPT_WRITEFUNCTION, WriteCallback);
+
+   Callback function that should only be called by curl! Will store all of the
+   data returned by the CURL object in the variable passed to curl by
+   curl_easy_setopt(CURL, CURLOPT_WRITEDATA, &buffer);
+
+   ex. curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+       curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
+
+   Pre-conditions: Curl has been set up globally, CURL object has been initialized.
+
+   Post-conditions: Data returned by CURL is stored in buffer.
+
+   Alternative description: Writes the data returned by each curl to the buffer
+   string pointed to by *userp.
+
+   Source: http://stackoverflow.com/questions/9786150/save-curl-content-result-into-a-string-in-c
+
+   Also see the libcurl documentation at http://curl.haxx.se/libcurl/c/allfuncs.html */
+
 size_t Library::WriteCallback(void *contents, size_t size, size_t nmemb, void *userp) {
     ((std::string*)userp)->append((char*)contents, size * nmemb);
     return size * nmemb;
 }
 
+/* int getLibrary(string)
+
+   The most important function in the library (sorry it's so long):
+   Given the username of a Hummingbird.me user, it downloads that person's Library array from
+   the Hummingbird API, which contains all of the Libray Entry objects corresponding to the
+   shows in their anime library. However, since the Library Entry objects do not contain all
+   of the desired information, like genres, it then goes through the array and downloads the
+   complete anime objects from the API using cURL's "multi interface" to make all of the
+   transfers fast and asynchronous. This makes the function quite complex, but increases
+   performance a lot. Once all the needed information is gotten from the API, it is parsed
+   using libjson-c and LibraryEntry objects are created and added to the hash table.
+
+   ***In the future, this will be split up into multiple smaller functions for clarity.
+
+   ex. int rc = getLibrary();
+
+   Pre-conditions: Library constructor must have globally initialized curl and set up hash table.
+   This function is private because it should only be called from the Library constructor!
+
+   Post-conditions: Library class is fully constructed; see post-conditions of constructor above.
+   Returns 0 on success, 1 on failure.
+
+   */
 int Library::getLibrary(std::string username) {
 
     /* Return code: 1 on failure, 0 on success */
@@ -86,9 +158,8 @@ int Library::getLibrary(std::string username) {
             curl_easy_strerror(res));
         rc = 1;
     } else {
-        /* Curl succeeded! */
-
-        /* Now we must download all of the metadata for the shows in the library */
+        /* Curl succeeded! Now we must download all of the metadata for
+           the shows in the library */
 
         /* Parse the downloaded library from buffer to a JSON object */
         library_json = json_tokener_parse(buffer.c_str());
@@ -96,7 +167,10 @@ int Library::getLibrary(std::string username) {
         /* Get the size of the library from JSON object */
         library_size = json_object_array_length(library_json);
 
-        /* The final json objects that we want will be stored in this array*/
+        /* The final json objects containing all of the desired metadata
+           that we've downloaded will be stored in this array. From these
+           json objects we can construct LibraryEntry objects using the
+           LibraryEntry constructor, which takes a json object as input. */
         json_object *library_entries_json[library_size];
 
         /* Set up N new curls, which will be reused multiple times
@@ -193,7 +267,7 @@ int Library::getLibrary(std::string username) {
             /* Perform multi curl action (asynchronous) */
             curl_multi_perform(multi_handle, &still_running);
 
-            /* libcurl mutli interface voodoo (waiting for multi curl to finish)
+            /* libcurl mutli interface voodoo (basically just waiting for multi curl to finish)
                Source: http://curl.haxx.se/libcurl/c/multi-app.html */
             do {
                 struct timeval timeout;
@@ -261,16 +335,18 @@ int Library::getLibrary(std::string username) {
                 }
             } while(still_running);
 
+            /* Remove easy curls from multi handle and reset them for next loop or cleanup*/
             for(int i=0; i<N; i++) {
                 curl_multi_remove_handle(multi_handle, curls[i]);
                 curl_easy_reset(curls[i]);
             }
         }
 
-        /* Clean up curls and multi curl */
+        /* Clean up easy curls */
         for(int i=0; i<N; i++)
             curl_easy_cleanup(curls[i]);
 
+        /* Clean up multi curl */
         curl_multi_cleanup(multi_handle);
 
         /* Parse all of the JSON respones from the API and add the fields
@@ -315,9 +391,11 @@ int Library::getLibrary(std::string username) {
              json_object_object_get_ex(anime_json, "genres", &entry_anime_genres);
              json_object_object_add(library_entries_json[i], "genres", entry_anime_genres);
 
+             /* Create LibraryEntry object from ith final library entry json object */
+             LibraryEntry *le = new LibraryEntry(library_entries_json[i]);
+
              /* Add final library entry to internal hash table */
-             LibraryEntry *x = new LibraryEntry(library_entries_json[i]);
-             addEntry(x);
+             addEntry(le);
         }
         /* Success */
         rc = 0;
@@ -326,30 +404,56 @@ int Library::getLibrary(std::string username) {
 	return rc;
 }
 
-void Library::addEntry(LibraryEntry *x) {
-    LibraryEntryWrapper *w = new LibraryEntryWrapper();
-    w->entry = x;
+/* void addEntry(LibraryEntry);
+
+   Takes a LibraryEntry object and packs it in a LibraryEntryWrapper struct,
+   and puts that struct into the hash table at the index given by the hash
+   function of the LibraryEntry's title.
+
+   ex. addEntry(le);
+
+   Pre-conditions: Library constructor must have initialized the hash table.
+   This function is private and should only be called from getLibrary().
+
+   Post-conditions: a LibraryEntry has been stored in the hash table. */
+
+void Library::addEntry(LibraryEntry *le) {
+
+    /* Create a new LibraryEntryWrapper and put le into it */
+    LibraryEntryWrapper *wrapper = new LibraryEntryWrapper();
+    wrapper->entry = le;
+
+    /* Temporary wrapper for traversing chains in the hash table */
     LibraryEntryWrapper *y = NULL;
 
-    int h = hashSum(x->getTitle());
+    /* Get the hash table index from hashSum */
+    int h = hashSum(le->getTitle());
 
+    /* Get the LibraryEntryWrapper at the index */
     y = &hashTable[h];
 
+    /* Put the wrapper into the first empty spot at the index */
     if(y->entry == NULL) {
-        hashTable[h] = *w;
-        delete w;
+        hashTable[h] = *wrapper;
+        delete wrapper;
     } else {
         while(y->next != NULL) {
             y = y->next;
         }
-        y->next = w;
-        w->previous = y;
+        y->next = wrapper;
+        wrapper->previous = y;
     }
 }
 
-int Library::getLibrarySize() {
-    return library_size;
-}
+/* int hashSum(string)
+
+   Returns the hash value of the string using the simple hash sum algorithm.
+
+   ex. int h = hashSum("Howl's Moving Castle");
+
+   Pre-conditions: string must be a valid string.
+
+   Post-conditions: none. */
 
 int Library::hashSum(std::string title) {
     int sum = 0;
@@ -358,6 +462,33 @@ int Library::hashSum(std::string title) {
     sum = sum % hash_size;
     return sum;
 }
+
+/*  int getLibrarySize();
+
+    Public method. Returns the number of items in the anime library.
+    Should be the same as the number of entries in the hash table,
+    unless getLibrary() failed, in which case it should be -1.
+
+    ex. int x = L->getLibrarySize();
+
+    Pre-conditions: Library object has been created by the constructor.
+
+    Post-conditions: none. This is just a getter for the library size. */
+
+int Library::getLibrarySize() {
+    return library_size;
+}
+
+/* LibraryEntry* getLibraryEntry(string);
+
+   Public method. Returns the LibraryEntry associated with the given
+   title string, or NULL if it isn't found.
+
+   ex. LibraryEntry *le = getLibraryEntry("Serial Experiments Lain");
+
+   Pre-conditions: Library object has been constructed by constructor.
+
+   Post-conditions: none. This is just a getter. */
 
 LibraryEntry* Library::getLibraryEntry(std::string title) {
     LibraryEntryWrapper *x;
@@ -380,7 +511,16 @@ LibraryEntry* Library::getLibraryEntry(std::string title) {
         return NULL;
 }
 
-/* Returns true if the first LibraryEntry goes before the second, alphabetically by title */
+/* bool libraryEntryTitleSort(LibraryEntry*, LibraryEntry*);
+
+   Returns true if the first LibraryEntry goes before the second, alphabetically by title.
+
+   ex. bool first = libraryEntryTitleSort(le1, le2)
+
+   Pre-conditions: either LibraryEntry pointer should not be NULL.
+
+   Post-conditions: none. */
+
 bool Library::libraryEntryTitleSort(LibraryEntry* i, LibraryEntry* j) {
 
     bool goesBefore;
@@ -393,7 +533,18 @@ bool Library::libraryEntryTitleSort(LibraryEntry* i, LibraryEntry* j) {
     return goesBefore;
 }
 
-/* Returns a vector of LibraryEntry pointers sorted alphabetically by title */
+/* vector<LibraryEntry*> getLibraryEntries(library_status);
+
+   Returns a vector of LibraryEntry pointers sorted alphabetically by title
+   corresponding to what the show's status is in the user's library, as
+   defined by the enum library_status in LibraryEntry.h
+
+   ex. lev = getLibraryEntries(CURRRENTLY_WATCHING);
+
+   Pre-conditions: Library object must have been created by constructor.
+
+   Post-conditions: none, this is just a getter. */
+
 std::vector<LibraryEntry*> Library::getLibraryEntries(library_status ls) {
 
     std::vector<LibraryEntry*> libraryEntries;
