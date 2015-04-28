@@ -4,6 +4,15 @@
 #include <json-c/json.h>
 #include <vector>
 
+enum library_status {
+    CURRENTLY_WATCHING,
+    PLAN_TO_WATCH,
+    COMPLETED,
+    ON_HOLD,
+    DROPPED,
+    UNDEFINED
+};
+
 class LibraryEntry
 {
     public:
@@ -15,10 +24,10 @@ class LibraryEntry
         std::string getAiringStatus() { return airingStatus; }
         std::string getEpisodeCount() { return episodeCount; }
         std::string getType() { return type; }
-        std::string getLibraryStatus() { return libraryStatus; }
+        library_status getLibraryStatus() { return libraryStatus; }
         std::string getEpisodesWatched() { return episodesWatched; }
         std::string getRating() { return rating; }
-        std::string getCommunityRating() { return communityRating; }
+        double getCommunityRating() { return communityRating; }
         std::vector<std::string> getGenres() { return genres; }
     protected:
     private:
@@ -28,9 +37,9 @@ class LibraryEntry
         std::string airingStatus;
         std::string episodeCount;
         std::string type;
-        std::string libraryStatus;
+        library_status libraryStatus;
         std::string episodesWatched;
         std::string rating;
-        std::string communityRating;
+        double communityRating;
 };
 #endif // LIBRARYENTRY_H

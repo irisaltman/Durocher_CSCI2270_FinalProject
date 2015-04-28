@@ -24,7 +24,20 @@ LibraryEntry::LibraryEntry(json_object *j)
 
     json_object *library_status_json;
     json_object_object_get_ex(j, "library_status", &library_status_json);
-    libraryStatus = std::string(json_object_get_string(library_status_json));
+    std::string libraryStatusString = std::string(json_object_get_string(library_status_json));
+
+    if(libraryStatusString.compare("currently-watching") == 0)
+        libraryStatus = CURRENTLY_WATCHING;
+    else if(libraryStatusString.compare("plan-to-watch") == 0)
+        libraryStatus = PLAN_TO_WATCH;
+    else if(libraryStatusString.compare("completed") == 0)
+        libraryStatus = COMPLETED;
+    else if(libraryStatusString.compare("on-hold") == 0)
+        libraryStatus = ON_HOLD;
+    else if(libraryStatusString.compare("dropped") == 0)
+        libraryStatus = DROPPED;
+    else /* Undefined, this shouldn't happen (means anime isn't in the user's library) */
+        libraryStatus = UNDEFINED;
 
     json_object *rating_json;
     json_object_object_get_ex(j, "rating", &rating_json);
@@ -32,7 +45,7 @@ LibraryEntry::LibraryEntry(json_object *j)
 
     json_object *community_rating_json;
     json_object_object_get_ex(j, "community_rating", &community_rating_json);
-    communityRating = std::string(json_object_to_json_string(community_rating_json));
+    communityRating = json_object_get_double(community_rating_json);
 
     json_object *type_json;
     json_object_object_get_ex(j, "show_type", &type_json);
@@ -48,20 +61,6 @@ LibraryEntry::LibraryEntry(json_object *j)
         genres[i] = std::string(json_object_get_string(genre_name_json));
     }
 }
-
-LibraryEntry::LibraryEntry()
-{
-    title = "";
-    synopsis = "";
-    airingStatus = "";
-    episodeCount = "";
-    episodesWatched = "";
-    libraryStatus = "";
-    rating = "";
-    communityRating = "";
-    type = "";
-}
-
 
 LibraryEntry::~LibraryEntry()
 {

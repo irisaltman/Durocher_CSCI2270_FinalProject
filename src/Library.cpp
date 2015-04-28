@@ -1,61 +1,68 @@
 #include "Library.h"
 #include <iostream>
+#include <vector>
 #include <curl/curl.h>
 
-/* Number of easy curls to bundle in a multi curl. ~100 seems to be optimum */
-#define N 100
+/* Number of easy curls to bundle in a multi curl. ~50-100 seems to be optimum */
+#define N 50
 
 Library::Library(std::string username)
 {
-    if(curl_setup == false) {
-        /* Should be called only once for the entire program */
-        curl_global_init(CURL_GLOBAL_SSL);
-        curl_setup = true;
-    }
+    /* Should be called only once for the entire program */
+    curl_global_init(CURL_GLOBAL_SSL);
 
     hash_size = 100;
     hashTable = new LibraryEntryWrapper[hash_size];
 
     int failure = getLibrary(username);
 
-    /* User's library could not be gotten */
+    /* To indicate that the user's library could not be gotten.
+       the library size is set to -1. */
     if(failure == 1)
         library_size = -1;
 }
 
 Library::~Library()
 {
-    if(curl_setup == true) {
-        /* Opposite of curl_global_init() */
-        curl_global_cleanup();
-        curl_setup = false;
-    }
+
+    /* Opposite of curl_global_init() */
+    curl_global_cleanup();
 
     /* Delete hashtable */
-    if(library_size > 1) {
-
+    if(library_size > 0) {
+        for(int i=0; i<hash_size; i++) {
+            if(hashTable[i].entry != NULL) {
+                LibraryEntryWrapper *x = &hashTable[i];
+                while(x != NULL) {
+                    x = x->next;
+                    delete x;
+                }
+            }
+        }
     }
 }
 
-// Source: http://stackoverflow.com/questions/9786150/save-curl-content-result-into-a-string-in-c
+/* Writes the data returned by each curl to the buffer string pointed to by *userp.
+   Source: http://stackoverflow.com/questions/9786150/save-curl-content-result-into-a-string-in-c */
 size_t Library::WriteCallback(void *contents, size_t size, size_t nmemb, void *userp) {
     ((std::string*)userp)->append((char*)contents, size * nmemb);
     return size * nmemb;
 }
 
 int Library::getLibrary(std::string username) {
-    /* Return 1 on failure, 0 on success */
+
+    /* Return code: 1 on failure, 0 on success */
     int rc;
 
     /* Hummingbird.me API URL for getting library */
 	std::string baseurl = "https://hummingbird.me/api/v1";
 	std::string endpoint = baseurl + "/users/" + username + "/library";
 
-	/* Buffer string for storing the unparsed API response */
+	/* Buffer string for storing the API response */
 	std::string buffer;
 
     /* Set up curl for downloading library information from API.
-       This will go to the API endpoing URL above and download
+       This will go to the API endpoint URL above and download
        the server's response in plain text (unparsed JSON) */
 	CURL *curl;
 	CURLcode res;
@@ -81,7 +88,7 @@ int Library::getLibrary(std::string username) {
     } else {
         /* Curl succeeded! */
 
-        /* Now we downloaded all of the metadata for the shows in the library */
+        /* Now we must download all of the metadata for the shows in the library */
 
         /* Parse the downloaded library from buffer to a JSON object */
         library_json = json_tokener_parse(buffer.c_str());
@@ -109,13 +116,12 @@ int Library::getLibrary(std::string username) {
            reusing both the multi_handle and the easy curls. */
         CURLM *multi_handle = curl_multi_init();
 
-        /* Stores the number of easy curls stil l running in multi_curl */
+        /* Stores the number of easy curls still running in multi_curl */
         int still_running;
 
         /* Initialize our N easy curls (only has to be done once) */
         for(int i=0; i<N; i++)
             curls[i] = curl_easy_init();
-
 
         /* Main loop in which we perform all of the curls */
         while(counter < library_size) {
@@ -179,6 +185,10 @@ int Library::getLibrary(std::string username) {
 
                 counter++;
             }
+
+            /* Kickstart multi curl, as per https://moz.com/devblog/high-performance-libcurl-tips/*/
+            if(counter == multi_handle_size)
+                curl_multi_socket_action(multi_handle, CURL_SOCKET_TIMEOUT, 0, &still_running);
 
             /* Perform multi curl action (asynchronous) */
             curl_multi_perform(multi_handle, &still_running);
@@ -344,7 +354,7 @@ int Library::getLibrarySize() {
 int Library::hashSum(std::string title) {
     int sum = 0;
     for (unsigned i = 0; i < title.size(); i++)
-        sum += title[i];  //ascii value of ith character in the string
+        sum += title[i];  /* ascii value of ith character in the string */
     sum = sum % hash_size;
     return sum;
 }
@@ -356,16 +366,51 @@ LibraryEntry* Library::getLibraryEntry(std::string title) {
 
     x = &hashTable[h];
 
-    while(x != NULL) {
+    while(found == false && x->entry != NULL) {
         if(x->entry->getTitle().compare(title) == 0) {
             found = true;
-            break;
+        } else {
+            x = x->next;
         }
-        x = x->next;
     }
 
     if(found == true)
         return x->entry;
     else
         return NULL;
+}
+
+/* Returns true if the first LibraryEntry goes before the second, alphabetically by title */
+bool Library::libraryEntryTitleSort(LibraryEntry* i, LibraryEntry* j) {
+
+    bool goesBefore;
+
+    if(i->getTitle().compare(j->getTitle()) < 0)
+        goesBefore = true;
+    else
+        goesBefore = false;
+
+    return goesBefore;
+}
+
+/* Returns a vector of LibraryEntry pointers sorted alphabetically by title */
+std::vector<LibraryEntry*> Library::getLibraryEntries(library_status ls) {
+
+    std::vector<LibraryEntry*> libraryEntries;
+
+    for(int i=0; i<hash_size; i++) {
+        if(hashTable[i].entry != NULL) {
+            LibraryEntryWrapper *x = &hashTable[i];
+            while(x != NULL) {
+                if(x->entry->getLibraryStatus() == ls) {
+                    libraryEntries.push_back(x->entry);
+                }
+                x = x->next;
+            }
+        }
+    }
+
+    std::sort(libraryEntries.begin(), libraryEntries.end(), libraryEntryTitleSort);
+    return libraryEntries;
+
 }
