@@ -7,7 +7,8 @@ This library allows you to interface with the Hummingbird.me API from within you
 ### How to run
 
 Running the example program is super easy, simply do `./main [username]` to download and browse a certain user's anime library. For example, [Josh](https://hummingbird.me/users/Josh/library) is the username of the co-founder of Hummingbird. To download and browse his library, simple type `./main Josh`.
-[link to documentation]
+
+Documentation on how the library works can be found in the library implementation files Library.cpp and LibraryEntry.cpp and their associated header files.
 
 ### Dependencies
 
@@ -34,8 +35,6 @@ Hjalte Durocher
 None, yet.
 
 ### Known Bugs
-
-* IMPORTANT: Documentation is incomplete right now.
 
 * Trying to download some users' libraries causes the following error while parsing the JSON objects returned by the Hummingbird API:
 
