@@ -124,7 +124,7 @@ size_t Library::WriteCallback(void *contents, size_t size, size_t nmemb, void *u
 int Library::getLibrary(std::string username) {
 
     /* Return code: 1 on failure, 0 on success */
-    int rc;
+    int rc = 0;
 
     /* Hummingbird.me API URL for getting library */
 	std::string baseurl = "https://hummingbird.me/api/v1";
@@ -151,13 +151,17 @@ int Library::getLibrary(std::string username) {
 		curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1);
 		res = curl_easy_perform(curl);
 		curl_easy_cleanup(curl);
+
+		/* Check if curl succeeded */
+		if (res != CURLE_OK) {
+            /* Curl failed! */
+            fprintf(stderr, "cURL failed: %s\n",
+                curl_easy_strerror(res));
+            rc = 1;
+        }
 	}
-    if (res != CURLE_OK) {
-        /* Curl failed! */
-        fprintf(stderr, "cURL failed: %s\n",
-            curl_easy_strerror(res));
-        rc = 1;
-    } else {
+
+    if(rc == 0) {
         /* Curl succeeded! Now we must download all of the metadata for
            the shows in the library */
 
